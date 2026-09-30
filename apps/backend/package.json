@@ -1,0 +1,38 @@
+{
+  "name": "@monkey-man/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:worker": "node --watch --watch-preserve-output --watch-path=./worker worker/index.js",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node worker/rules/__tests__/parser-rules.test.js && node worker/sources/__tests__/routing.test.js",
+    "simulate:uber": "node worker/simulate.js",
+    "db:seed": "node prisma/seed.js",
+    "mock:seed": "node prisma/mock-transactions.js seed",
+    "mock:clear": "node prisma/mock-transactions.js clear"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@google-cloud/pubsub": "^6.1.0",
+    "@prisma/client": "^5.22.0",
+    "googleapis": "^181.0.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "prisma": "5.22.0",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@11.24.0"
+}

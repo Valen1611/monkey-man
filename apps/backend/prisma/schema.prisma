@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./monkey-man.db"
+}
+
+model Wallet {
+  id               String        @id @default(cuid())
+  name             String        @unique
+  balance          Float         @default(0)
+  color            String        @default("#000000")
+  imageUrl         String?
+  isDeleted        Boolean       @default(false)
+  transactions     Transaction[] @relation("WalletTransactions")
+  transfersIn      Transaction[] @relation("WalletTransfers")
+  parserRules      ParserRule[]
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  color        String
+  group        String        // INCOME, FIXED, VARIABLE, SAVINGS, TRANSFER
+  transactions Transaction[]
+  budgets      Budget[]
+  parserRules  ParserRule[]
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  amount      Float
+  date        String
+  description String?
+  
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  
+  walletId    String
+  wallet      Wallet   @relation("WalletTransactions", fields: [walletId], references: [id])
+
+  toWalletId  String?
+  toWallet    Wallet?  @relation("WalletTransfers", fields: [toWalletId], references: [id])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  yearMonth  String   // e.g. "2026-09"
+  limit      Float
+  
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  
+  @@unique([yearMonth, categoryId])
+}
+
+/// Worker routing rule: matches an envelope key (or sender) and assigns
+/// a category, wallet, and marks internal transfers if it belongs to the user.
+///
+/// `keyType` is a String because the datasource is SQLite (no native enums).
+/// Valid values are defined in `src/lib/ruleKeyTypes.js` and validated by the API.
+model ParserRule {
+  id       String @id @default(cuid())
+  keyType  String // CBU | FROM
+  keyValue String
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  walletId String?
+  wallet   Wallet? @relation(fields: [walletId], references: [id])
+
+  /// Indicates this account belongs to the user: matching transactions are marked
+  /// as internal transfers, routing funds from `walletId` to `toWalletId`.
+  isMine Boolean @default(false)
+
+  @@unique([keyType, keyValue])
+}
+
+model WorkerLog {
+  id        String   @id @default(cuid())
+  level     String   @default("info") // "info", "error", "success", "skip"
+  message   String
+  metadata  String?  // JSON metadata if needed
+  createdAt DateTime @default(now())
+}
+
+model SyncState {
+  id          String   @id @default(cuid())
+  serviceName String   @unique
+  lastSync    String
+  updatedAt   DateTime @updatedAt
+}
+

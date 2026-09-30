@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Pre-commit hook: blocks commits containing likely secrets.
+# Enable with: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+PATTERNS=(
+  'GOCSPX-'           # Google OAuth client secret prefix
+  'AIza[0-9A-Za-z_-]' # Google API key prefix
+  'sk-[a-zA-Z0-9]'    # OpenAI / Stripe secret key prefix
+  'ghp_[a-zA-Z0-9]'   # GitHub personal access token
+  'refresh_token.*1//' # OAuth refresh token pattern
+)
+
+FAILED=0
+
+for pattern in "${PATTERNS[@]}"; do
+  # Notice the added -- ':!.githooks' to exclude the hooks folder from the scan
+  MATCHES=$(git diff --cached --diff-filter=d -U0 -- ':!.githooks' | grep -n "^+" | grep -v "^+++" | grep -iE "$pattern" || true)
+  if [ -n "$MATCHES" ]; then
+    echo "🚨 Possible secret detected matching pattern: $pattern"
+    echo "$MATCHES"
+    FAILED=1
+  fi
+done
+
+if [ "$FAILED" -eq 1 ]; then
+  echo ""
+  echo "❌ Commit blocked: potential secrets detected in staged changes."
+  echo "   If this is a false positive, commit with: git commit --no-verify"
+  exit 1
+fi

@@ -1,0 +1,89 @@
+services:
+  frontend:
+    image: node:22-slim
+    working_dir: /app
+    env_file:
+      - ./.env
+    volumes:
+      - .:/app
+      # Keep container pnpm installs and Turbopack caches (run as root) OUT of the host tree.
+      - /app/node_modules
+      - /app/apps/frontend/node_modules
+      - /app/apps/frontend/.next
+      - /app/.pnpm-store
+    ports:
+      - "7071:7071"
+    environment:
+      - PORT=7071
+      - HOSTNAME=0.0.0.0
+      - CI=true
+      # NEXT_PUBLIC_API_URL and NEXT_PUBLIC_API_SECRET are intentionally NOT overridden here
+      # so they are read from .env — change them there.
+    command: sh -c "corepack enable && pnpm install --ignore-scripts && pnpm --filter frontend dev"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7071/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: always
+
+  backend:
+    image: node:22-slim
+    build:
+      context: .
+      args:
+        APP_NAME: backend
+    env_file:
+      - ./.env
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ./secrets:/app/secrets:ro
+      - ./custom-parsers:/app/apps/backend/worker/sources/custom
+      # Keep container pnpm installs (run as root) OUT of the host tree.
+      - /app/node_modules
+      - /app/apps/backend/node_modules
+      - /app/.pnpm-store
+    ports:
+      - "7070:7070"
+      - "5555:5555"
+    environment:
+      - PORT=7070
+      - HOSTNAME=0.0.0.0
+      - CI=true
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-key.json
+    command: sh -c "corepack enable && apt-get update && apt-get install -y openssl && pnpm install --ignore-scripts && pnpm --filter backend exec prisma generate && pnpm --filter backend exec prisma db push && pnpm --filter backend db:seed && pnpm --filter backend dev"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7070/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: always
+
+  listener:
+    image: node:22-slim
+    build:
+      context: .
+      args:
+        APP_NAME: backend
+    depends_on:
+      backend:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ./secrets:/app/secrets:ro
+      - ./custom-parsers:/app/apps/backend/worker/sources/custom
+      # Keep container pnpm installs (run as root) OUT of the host tree.
+      - /app/node_modules
+      - /app/apps/backend/node_modules
+      - /app/.pnpm-store
+    environment:
+      - CI=true
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-key.json
+    command: sh -c "corepack enable && apt-get update && apt-get install -y openssl && pnpm install --ignore-scripts && pnpm --filter backend exec prisma generate && pnpm --filter backend dev:worker"
+    restart: always

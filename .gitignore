@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -9,12 +9,13 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+/.pnpm-store
 
 # testing
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -23,6 +24,8 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*key.json
 
 # debug
 npm-debug.log*
@@ -30,8 +33,14 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
+
+# secrets directory
+secrets/
+**/secrets/
+!secrets/.gitkeep
 
 # vercel
 .vercel
@@ -39,3 +48,23 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Database
+*.db
+*.db-journal
+
+# Personal & custom parsers
+personal-rules.js
+apps/backend/listener/personal-rules.js
+apps/backend/worker/rules/personal-rules.js
+custom-parsers/*
+!custom-parsers/.gitkeep
+!custom-parsers/README.md
+apps/backend/worker/sources/custom/*
+!apps/backend/worker/sources/custom/.gitkeep
+!apps/backend/worker/sources/custom/custom-source.example.js
+
+# Raw email dumps & operational state
+apps/backend/dumps/*
+!apps/backend/dumps/.gitkeep
+apps/backend/processed-message-ids.json
