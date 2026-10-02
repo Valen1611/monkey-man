@@ -144,16 +144,23 @@ export default function RulesPage() {
                             <option key={cat.id} value={cat.id}>{cat.name} ({cat.group})</option>
                         ))}
                     </select>
-                    <select
-                        value={walletId}
-                        onChange={(e) => setWalletId(e.target.value)}
-                        className="w-full p-3 text-sm rounded-xl bg-[#e0e0e0] shadow-[5px_5px_10px_#bebebe,_-5px_-5px_10px_#ffffff] outline-none text-gray-700 font-semibold appearance-none"
-                    >
-                        <option value="">No wallet</option>
-                        {wallets.map(wallet => (
-                            <option key={wallet.id} value={wallet.id}>{wallet.name}</option>
-                        ))}
-                    </select>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs text-gray-500 font-semibold px-2">
+                            {isMine 
+                                ? (keyType === 'FROM' ? "Source Wallet (where money comes from)" : "Target Wallet (where money goes to)")
+                                : "Map to Wallet"}
+                        </label>
+                        <select
+                            value={walletId}
+                            onChange={(e) => setWalletId(e.target.value)}
+                            className="w-full p-3 text-sm rounded-xl bg-[#e0e0e0] shadow-[5px_5px_10px_#bebebe,_-5px_-5px_10px_#ffffff] outline-none text-gray-700 font-semibold appearance-none"
+                        >
+                            <option value="">No wallet</option>
+                            {wallets.map(wallet => (
+                                <option key={wallet.id} value={wallet.id}>{wallet.name}</option>
+                            ))}
+                        </select>
+                    </div>
                     <label className="flex items-center gap-3 text-sm text-gray-600 select-none">
                         <input
                             type="checkbox"
@@ -205,7 +212,9 @@ export default function RulesPage() {
                                     {rule.wallet && (
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-gray-400 font-medium">
-                                                {rule.isMine ? "Target Wallet ➜" : "Wallet ➜"}
+                                                {rule.isMine 
+                                                    ? (rule.keyType === 'FROM' ? "Source Wallet ➜" : "Target Wallet ➜")
+                                                    : "Wallet ➜"}
                                             </span>
                                             <span className="font-semibold text-gray-700">{rule.wallet.name}</span>
                                         </div>

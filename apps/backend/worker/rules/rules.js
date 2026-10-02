@@ -128,6 +128,10 @@ async function applyRules(envelope, options = {}) {
   if (cbuRule && cbuRule.isMine) {
     result.isInternalTransfer = true;
     result.toWalletId = cbuRule.walletId || null;
+  } else if (fromRule && fromRule.isMine) {
+    result.isInternalTransfer = true;
+    result.toWalletId = result.walletId;
+    result.walletId = fromRule.walletId || null;
   }
 
   return result;

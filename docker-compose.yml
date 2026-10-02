@@ -21,7 +21,7 @@ services:
       # so they are read from .env — change them there.
     command: sh -c "corepack enable && pnpm install --ignore-scripts && pnpm --filter frontend dev"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7071/"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:7071/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -55,7 +55,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-key.json
     command: sh -c "corepack enable && apt-get update && apt-get install -y openssl && pnpm install --ignore-scripts && pnpm --filter backend exec prisma generate && pnpm --filter backend exec prisma db push && pnpm --filter backend db:seed && pnpm --filter backend dev"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7070/"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:7070/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
