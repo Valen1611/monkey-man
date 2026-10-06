@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import TransactionTile from "@/src/components/TransactionTile";
 import EditTransactionModal from "@/src/components/EditTransactionModal";
 import QuickAddTransactionModal from "@/src/components/Home/QuickAddTransactionModal";
@@ -21,6 +21,18 @@ export default function LogPage() {
   // Modals state
   const [isAdding, setIsAdding] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
+  // Collapsed dates state
+  const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
+
+  const toggleDate = (dateStr: string) => {
+    setCollapsedDates(prev => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) next.delete(dateStr);
+      else next.add(dateStr);
+      return next;
+    });
+  };
 
   // Global hotkey: 'N' or '+' opens Quick Add when not in form input
   useEffect(() => {
@@ -59,6 +71,18 @@ export default function LogPage() {
 
     return true;
   });
+
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const groupedTransactions = useMemo(() => {
+    return sortedTransactions.reduce((acc, tx) => {
+      const dateObj = new Date(tx.date);
+      const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+      if (!acc[dateStr]) acc[dateStr] = [];
+      acc[dateStr].push(tx);
+      return acc;
+    }, {} as Record<string, Transaction[]>);
+  }, [sortedTransactions]);
 
   const filteredTotal = filteredTransactions.reduce((acc, tx) => {
     const isIncome = tx.category?.group === "INCOME";
@@ -189,13 +213,34 @@ export default function LogPage() {
             <span className="text-sm font-bold">No transactions match your search or filters.</span>
           </div>
         ) : (
-          <div>
-            {filteredTransactions.map((tx) => (
-              <TransactionTile
-                key={tx.id}
-                transaction={tx}
-                onEdit={(targetTx) => setEditingTransaction(targetTx)}
-              />
+          <div className="flex flex-col gap-6">
+            {Object.entries(groupedTransactions).map(([dateStr, txs]) => (
+              <div key={dateStr} className="flex flex-col gap-2">
+                <button
+                  onClick={() => toggleDate(dateStr)}
+                  className="flex justify-between items-center px-2 py-1 text-gray-500 font-bold text-xs uppercase tracking-wider hover:text-gray-700 transition-colors cursor-pointer border-b border-gray-300/40 pb-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 flex justify-center text-[10px]">
+                      {collapsedDates.has(dateStr) ? '▶' : '▼'}
+                    </span>
+                    <span>{dateStr}</span>
+                  </div>
+                  <span>{txs.length} {txs.length === 1 ? 'tx' : 'txs'}</span>
+                </button>
+                
+                {!collapsedDates.has(dateStr) && (
+                  <div className="flex flex-col">
+                    {txs.map((tx) => (
+                      <TransactionTile
+                        key={tx.id}
+                        transaction={tx}
+                        onEdit={(targetTx) => setEditingTransaction(targetTx)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
