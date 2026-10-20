@@ -5,7 +5,7 @@ export interface Transaction {
     date: string;
     description?: string | null;
     amount: number;
-    categoryId: string;
+    categoryId?: string | null;
     category?: { id: string; name: string; color: string; group: string } | null;
     walletId: string;
     wallet?: { id: string; name: string; color: string } | null;
