@@ -135,6 +135,7 @@ async function simulate() {
         walletId: finalData.walletId,
         toWalletId: finalData.toWalletId,
         isInternalTransfer: finalData.isInternalTransfer,
+        isAutomatic: true,
       });
       await prisma.workerLog.create({
         data: {

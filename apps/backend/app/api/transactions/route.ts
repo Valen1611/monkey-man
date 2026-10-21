@@ -34,6 +34,7 @@ export async function POST(request: Request) {
             categoryId: body.categoryId || null,
             walletId: body.walletId,
             toWalletId: body.toWalletId || null,
+            isAutomatic: body.isAutomatic !== undefined ? Boolean(body.isAutomatic) : false,
         });
 
         return NextResponse.json(transaction, { status: 201 });

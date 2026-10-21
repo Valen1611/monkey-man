@@ -17,6 +17,7 @@ export default function LogPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string>("ALL");
   const [filterWalletId, setFilterWalletId] = useState<string>("ALL");
+  const [filterOrigin, setFilterOrigin] = useState<"ALL" | "AUTO" | "MANUAL">("ALL");
 
   // Modals state
   const [isAdding, setIsAdding] = useState(false);
@@ -68,6 +69,9 @@ export default function LogPage() {
     if (filterWalletId !== "ALL") {
       if (tx.walletId !== filterWalletId && tx.toWalletId !== filterWalletId) return false;
     }
+
+    if (filterOrigin === "AUTO" && !tx.isAutomatic) return false;
+    if (filterOrigin === "MANUAL" && tx.isAutomatic) return false;
 
     return true;
   });
@@ -144,6 +148,26 @@ export default function LogPage() {
               }`}
             >
               {grp}
+            </button>
+          ))}
+        </div>
+
+        {/* Origin Filter Pills */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-400 px-1">
+            Origin:
+          </span>
+          {(["ALL", "AUTO", "MANUAL"] as const).map((origin) => (
+            <button
+              key={origin}
+              onClick={() => setFilterOrigin(origin)}
+              className={`px-3 py-1.5 text-xs font-extrabold rounded-xl transition-all ${
+                filterOrigin === origin
+                  ? "bg-[#e0e0e0] shadow-[inset_3px_3px_6px_#bebebe,_inset_-3px_-3px_6px_#ffffff] text-blue-600 scale-95"
+                  : "bg-[#e0e0e0] shadow-[3px_3px_6px_#bebebe,_-3px_-3px_6px_#ffffff] text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              {origin === "ALL" ? "All" : origin === "AUTO" ? "⚡ Auto" : "✍️ Manual"}
             </button>
           ))}
         </div>

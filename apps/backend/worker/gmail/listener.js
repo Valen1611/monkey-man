@@ -119,6 +119,7 @@ async function processMessage(messageId) {
       walletId: finalData.walletId,
       toWalletId: finalData.toWalletId,
       isInternalTransfer: finalData.isInternalTransfer,
+      isAutomatic: true,
     });
     await markProcessed(messageId);
     console.log(`🔴 [Gmail] Transaction saved: ${finalDescription} for $${finalData.amount}`);

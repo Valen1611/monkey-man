@@ -111,6 +111,10 @@ export default function LiveTransactionFeed({ onAddTransaction }: { onAddTransac
                                                         })}
                                                     </span>
                                                     {tx.wallet && <span>• {tx.wallet.name}</span>}
+                                                    <span>•</span>
+                                                    <span className={tx.isAutomatic ? "text-indigo-600 font-bold" : "text-gray-500 font-bold"}>
+                                                        {tx.isAutomatic ? "⚡ Auto" : "✍️ Manual"}
+                                                    </span>
                                                 </div>
                                             </div>
                                             <span className="text-xs font-black text-gray-800 shrink-0">
@@ -176,9 +180,20 @@ export default function LiveTransactionFeed({ onAddTransaction }: { onAddTransac
                                             <span className="text-sm font-bold text-gray-700">
                                                 {tx.description || tx.category?.name || "Transaction"}
                                             </span>
-                                            <span className="text-xs text-gray-500 font-semibold">
-                                                {new Date(tx.date).toLocaleString()}
-                                            </span>
+                                            <div className="flex items-center gap-1.5 text-xs text-gray-500 font-semibold">
+                                                <span>
+                                                    {new Date(tx.date).toLocaleDateString([], {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                </span>
+                                                <span>•</span>
+                                                <span className={tx.isAutomatic ? "text-indigo-600 font-bold text-[10px]" : "text-gray-500 font-bold text-[10px]"}>
+                                                    {tx.isAutomatic ? "⚡ Auto" : "✍️ Manual"}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end">

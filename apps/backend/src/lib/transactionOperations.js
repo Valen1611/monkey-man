@@ -45,6 +45,7 @@ async function createTransactionWithBalance(prisma, data) {
         categoryId: category ? category.id : null,
         walletId: data.walletId,
         toWalletId: data.toWalletId || null,
+        isAutomatic: data.isAutomatic !== undefined ? Boolean(data.isAutomatic) : false,
       },
       include: { category: true, wallet: true, toWallet: true },
     });
@@ -187,6 +188,7 @@ async function updateTransactionWithBalance(prisma, id, updates) {
         ...(updates.categoryId !== undefined ? { categoryId: updates.categoryId || null } : {}),
         ...(updates.walletId !== undefined ? { walletId: updates.walletId } : {}),
         ...(updates.toWalletId !== undefined ? { toWalletId: updates.toWalletId || null } : {}),
+        ...(updates.isAutomatic !== undefined ? { isAutomatic: Boolean(updates.isAutomatic) } : {}),
       },
       include: { category: true, wallet: true, toWallet: true },
     });

@@ -15,6 +15,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             categoryId?: string | null;
             walletId?: string;
             toWalletId?: string | null;
+            isAutomatic?: boolean;
         } = {};
 
         if (body.amount !== undefined) {
@@ -27,6 +28,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         if (body.categoryId !== undefined) updates.categoryId = body.categoryId;
         if (body.walletId !== undefined) updates.walletId = body.walletId;
         if (body.toWalletId !== undefined) updates.toWalletId = body.toWalletId;
+        if (body.isAutomatic !== undefined) updates.isAutomatic = Boolean(body.isAutomatic);
 
         const updated = await updateTransactionWithBalance(prisma, id, updates);
         return NextResponse.json(updated);

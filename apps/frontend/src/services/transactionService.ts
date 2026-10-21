@@ -11,6 +11,7 @@ export interface Transaction {
     wallet?: { id: string; name: string; color: string } | null;
     toWalletId?: string | null;
     toWallet?: { id: string; name: string; color: string } | null;
+    isAutomatic?: boolean;
 }
 
 export interface CreateTransactionPayload {
@@ -20,6 +21,7 @@ export interface CreateTransactionPayload {
     categoryId: string;
     walletId: string;
     toWalletId?: string;
+    isAutomatic?: boolean;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7070';

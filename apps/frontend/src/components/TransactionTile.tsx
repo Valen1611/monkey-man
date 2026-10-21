@@ -22,7 +22,23 @@ export default function TransactionTile({
                 <div className="flex-1">
                     <div className="font-semibold text-gray-700">{transaction.description || transaction.category?.name || "Transaction"}</div>
                     <div className="text-sm text-gray-500 mb-2">{transaction.date}</div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2.5 items-center flex-wrap">
+                        <div
+                            className="px-2.5 py-0.5 w-fit text-[11px] font-black rounded-md bg-[#e0e0e0] shadow-[inset_2px_2px_4px_#bebebe,_inset_-2px_-2px_4px_#ffffff] flex items-center gap-1 cursor-default"
+                            title={transaction.isAutomatic ? "Automatically ingested from email/sync" : "Manually entered"}
+                        >
+                            {transaction.isAutomatic ? (
+                                <span className="text-indigo-600 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                    Auto
+                                </span>
+                            ) : (
+                                <span className="text-gray-500 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                                    Manual
+                                </span>
+                            )}
+                        </div>
                         {transaction.wallet && (
                             <div className="px-3 py-1 w-fit text-xs font-bold rounded-md bg-[#e0e0e0] shadow-[3px_3px_6px_#bebebe,_-3px_-3px_6px_#ffffff] transition-shadow duration-300 hover:shadow-[inset_3px_3px_6px_#bebebe,_inset_-3px_-3px_6px_#ffffff] cursor-default">
                                 <span className="transition-transform duration-300 hover:scale-95 inline-block uppercase tracking-wider" style={{ color: transaction.wallet.color }}>{transaction.wallet.name}</span>
