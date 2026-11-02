@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const GMAIL_SERVICE = 'gmail';
 const HISTORY_KEY = 'lastHistoryId';
 const IDS_KEY = 'processedIds';
+const WATCH_EXPIRATION_KEY = 'watchExpiration';
 
 const prisma = new PrismaClient();
 
@@ -94,4 +95,41 @@ async function setLastHistoryId(id) {
   }
 }
 
-module.exports = { isProcessed, markProcessed, getLastHistoryId, setLastHistoryId };
+async function getWatchExpiration() {
+  try {
+    const record = await prisma.syncState.findUnique({
+      where: { serviceName: `${GMAIL_SERVICE}:${WATCH_EXPIRATION_KEY}` }
+    });
+    if (record && record.lastSync) {
+      const n = Number(record.lastSync);
+      return Number.isFinite(n) ? n : null;
+    }
+  } catch (e) {
+    console.error('⚠️ [Dedup] Failed to get watch expiration:', e.message);
+  }
+  return null;
+}
+
+async function setWatchExpiration(expiration) {
+  const n = Number(expiration);
+  if (Number.isFinite(n) && n > 0) {
+    try {
+      await prisma.syncState.upsert({
+        where: { serviceName: `${GMAIL_SERVICE}:${WATCH_EXPIRATION_KEY}` },
+        update: { lastSync: String(n) },
+        create: { serviceName: `${GMAIL_SERVICE}:${WATCH_EXPIRATION_KEY}`, lastSync: String(n) },
+      });
+    } catch (e) {
+      console.error('⚠️ [Dedup] Failed to persist watch expiration:', e.message);
+    }
+  }
+}
+
+module.exports = {
+  isProcessed,
+  markProcessed,
+  getLastHistoryId,
+  setLastHistoryId,
+  getWatchExpiration,
+  setWatchExpiration
+};

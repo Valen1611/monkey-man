@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node worker/rules/__tests__/parser-rules.test.js && node worker/sources/__tests__/routing.test.js",
+    "test": "node worker/rules/__tests__/parser-rules.test.js && node worker/sources/__tests__/routing.test.js && node worker/gmail/__tests__/watch.test.js",
     "simulate:uber": "node worker/simulate.js",
     "db:seed": "node prisma/seed.js",
     "mock:seed": "node prisma/mock-transactions.js seed",

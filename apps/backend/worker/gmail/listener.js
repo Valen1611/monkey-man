@@ -1,29 +1,12 @@
 const { PubSub } = require('@google-cloud/pubsub');
 const { google } = require('googleapis');
-const { PrismaClient } = require('@prisma/client');
+const { logEvent, prisma } = require('./logger');
 const { getEmailBody, getEmailBodyHtml } = require('./parser');
 const { routeSource, routingHeaders } = require('../sources');
 const { applyRules } = require('../rules/rules');
 const { dumpEmailToFile } = require('./dump');
 const { isProcessed, markProcessed, getLastHistoryId, setLastHistoryId } = require('./processed');
 const { createTransactionWithBalance } = require('../../src/lib/transactionOperations');
-
-const prisma = new PrismaClient();
-
-async function logEvent(level, message, metadata = null) {
-  console.log(`[${level.toUpperCase()}] ${message}`);
-  try {
-    await prisma.workerLog.create({
-      data: {
-        level,
-        message,
-        metadata: metadata ? JSON.stringify(metadata) : null
-      }
-    });
-  } catch (e) {
-    console.error('Error saving worker log:', e.message);
-  }
-}
 
 const pubSubClient = new PubSub({
   projectId: process.env.GOOGLE_PROJECT_ID
@@ -156,6 +139,7 @@ async function processLabel() {
 async function processHistory(startHistoryId) {
   const ids = new Set();
   let pageToken;
+  let latestHistoryId = null;
 
   do {
     const res = await gmail.users.history.list({
@@ -164,6 +148,12 @@ async function processHistory(startHistoryId) {
       pageToken,
       historyTypes: ['messageAdded', 'labelAdded']
     });
+    if (res.data.historyId) {
+      const hId = Number(res.data.historyId);
+      if (Number.isFinite(hId)) {
+        latestHistoryId = Math.max(latestHistoryId || 0, hId);
+      }
+    }
     const history = res.data.history || [];
     for (const entry of history) {
       for (const m of entry.messagesAdded || []) {
@@ -188,6 +178,10 @@ async function processHistory(startHistoryId) {
     } catch (e) {
       await logEvent('error', `Error in ${messageId}: ${e.message}`);
     }
+  }
+
+  if (latestHistoryId && latestHistoryId > startHistoryId) {
+    await setLastHistoryId(latestHistoryId);
   }
 
   return ids;
@@ -224,10 +218,15 @@ async function processNewMail(notificationHistoryId) {
   }
 
   const notifId = Number(notificationHistoryId);
-  if (Number.isFinite(notifId)) {
+  if (Number.isFinite(notifId) && notifId > 0) {
     const current = await getLastHistoryId();
     await setLastHistoryId(Math.max(current || 0, notifId));
   }
+}
+
+async function catchUp() {
+  console.log('🔄 [Gmail] Running catch-up sync...');
+  await processNewMail(null);
 }
 
 async function startGmailListener() {
@@ -256,14 +255,8 @@ async function startGmailListener() {
 
   subscription.on('error', (error) => {
     console.error('🔴 [Gmail] Fatal error on Pub/Sub subscription:', error);
+    logEvent('error', `Fatal error on Pub/Sub subscription: ${error.message || error}`);
   });
-
-  // Catch-up on startup
-  try {
-    await processNewMail(null);
-  } catch (error) {
-    console.error('🔴 [Gmail] Catch-up error on startup:', error);
-  }
 }
 
-module.exports = { startGmailListener };
+module.exports = { startGmailListener, catchUp, processNewMail };

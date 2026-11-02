@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { useTransactions, useUpdateTransaction } from "@/src/hooks/useTransactions";
 import { useCategories } from "@/src/hooks/useCategories";
-import { moneyFormat } from "@/src/utils/utils";
-
-const CATEGORY_GROUP_ORDER = ['VARIABLE', 'FIXED', 'TRANSFER', 'SAVINGS', 'INCOME'];
+import TransactionCard from "@/src/components/TransactionCard";
 
 export default function LiveTransactionFeed({ onAddTransaction }: { onAddTransaction?: () => void }) {
     const { data: transactions = [], isLoading } = useTransactions({
@@ -34,12 +32,6 @@ export default function LiveTransactionFeed({ onAddTransaction }: { onAddTransac
             }
         );
     };
-
-    const groups = Array.from(new Set(categories.map((c) => c.group))).sort((a, b) => {
-        const idxA = CATEGORY_GROUP_ORDER.indexOf(a);
-        const idxB = CATEGORY_GROUP_ORDER.indexOf(b);
-        return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-    });
 
     return (
         <div className="w-full p-6 rounded-[20px] bg-[#e0e0e0] shadow-[10px_10px_20px_#bebebe,_-10px_-10px_20px_#ffffff] flex flex-col h-full min-h-[420px]">
@@ -87,63 +79,16 @@ export default function LiveTransactionFeed({ onAddTransaction }: { onAddTransac
                                 </span>
                             </div>
 
-                            <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                            <div className="flex flex-col gap-2.5 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
                                 {uncategorizedTransactions.map((tx) => (
-                                    <div
+                                    <TransactionCard
                                         key={tx.id}
-                                        className="p-3 rounded-[14px] bg-[#e0e0e0] shadow-[3px_3px_6px_#bebebe,_-3px_-3px_6px_#ffffff] flex flex-col gap-2"
-                                    >
-                                        <div className="flex justify-between items-start gap-2">
-                                            <div className="flex flex-col min-w-0">
-                                                <span
-                                                    className="text-xs font-bold text-gray-800 truncate"
-                                                    title={tx.description || "Transfer"}
-                                                >
-                                                    {tx.description || "Transfer"}
-                                                </span>
-                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-semibold">
-                                                    <span>
-                                                        {new Date(tx.date).toLocaleDateString([], {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        })}
-                                                    </span>
-                                                    {tx.wallet && <span>• {tx.wallet.name}</span>}
-                                                    <span>•</span>
-                                                    <span className={tx.isAutomatic ? "text-indigo-600 font-bold" : "text-gray-500 font-bold"}>
-                                                        {tx.isAutomatic ? "⚡ Auto" : "✍️ Manual"}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <span className="text-xs font-black text-gray-800 shrink-0">
-                                                -{moneyFormat(tx.amount)}
-                                            </span>
-                                        </div>
-
-                                        <select
-                                            value=""
-                                            onChange={(e) => handleAssignCategory(tx.id, e.target.value)}
-                                            disabled={updatingId === tx.id}
-                                            className="w-full py-1.5 px-2.5 rounded-lg bg-[#e0e0e0] shadow-[inset_2px_2px_4px_#bebebe,_inset_-2px_-2px_4px_#ffffff] focus:ring-1 focus:ring-amber-500 outline-none text-xs font-bold text-gray-700 cursor-pointer disabled:opacity-50 transition-all"
-                                        >
-                                            <option value="" disabled>
-                                                {updatingId === tx.id ? "Assigning category..." : "⚡ Select category..."}
-                                            </option>
-                                            {groups.map((group) => (
-                                                <optgroup key={group} label={group}>
-                                                    {categories
-                                                        .filter((c) => c.group === group)
-                                                        .map((c) => (
-                                                            <option key={c.id} value={c.id}>
-                                                                {c.name}
-                                                            </option>
-                                                        ))}
-                                                </optgroup>
-                                            ))}
-                                        </select>
-                                    </div>
+                                        transaction={tx}
+                                        categories={categories}
+                                        onAssignCategory={handleAssignCategory}
+                                        isUpdatingCategory={updatingId === tx.id}
+                                        variant="raised"
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -165,48 +110,11 @@ export default function LiveTransactionFeed({ onAddTransaction }: { onAddTransac
                             </div>
                         ) : (
                             recentTransactions.slice(0, 10).map((tx) => (
-                                <div
+                                <TransactionCard
                                     key={tx.id}
-                                    className="flex justify-between items-center p-4 rounded-[15px] bg-[#e0e0e0] shadow-[inset_4px_4px_8px_#bebebe,_inset_-4px_-4px_8px_#ffffff]"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-[#e0e0e0] shadow-[3px_3px_6px_#bebebe,_-3px_-3px_6px_#ffffff]">
-                                            <div
-                                                className="w-3 h-3 rounded-full shadow-[inset_1px_1px_2px_rgba(0,0,0,0.2)]"
-                                                style={{ backgroundColor: tx.category?.color || "#000" }}
-                                            />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-700">
-                                                {tx.description || tx.category?.name || "Transaction"}
-                                            </span>
-                                            <div className="flex items-center gap-1.5 text-xs text-gray-500 font-semibold">
-                                                <span>
-                                                    {new Date(tx.date).toLocaleDateString([], {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                    })}
-                                                </span>
-                                                <span>•</span>
-                                                <span className={tx.isAutomatic ? "text-indigo-600 font-bold text-[10px]" : "text-gray-500 font-bold text-[10px]"}>
-                                                    {tx.isAutomatic ? "⚡ Auto" : "✍️ Manual"}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span
-                                            className={`font-black ${
-                                                tx.category?.group === "INCOME" ? "text-green-500" : "text-gray-700"
-                                            }`}
-                                        >
-                                            {tx.category?.group === "INCOME" ? "+" : "-"}
-                                            {moneyFormat(tx.amount)}
-                                        </span>
-                                    </div>
-                                </div>
+                                    transaction={tx}
+                                    variant="inset"
+                                />
                             ))
                         )}
                     </div>

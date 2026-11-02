@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import TransactionTile from "@/src/components/TransactionTile";
+import TransactionCard from "@/src/components/TransactionCard";
 import EditTransactionModal from "@/src/components/EditTransactionModal";
 import QuickAddTransactionModal from "@/src/components/Home/QuickAddTransactionModal";
-import { useTransactions } from "@/src/hooks/useTransactions";
+import { useTransactions, useUpdateTransaction } from "@/src/hooks/useTransactions";
+import { useCategories } from "@/src/hooks/useCategories";
 import { useWallets } from "@/src/hooks/useWallets";
 import { Transaction } from "@/src/services/transactionService";
 import { moneyFormat } from "@/src/utils/utils";
@@ -12,6 +13,13 @@ import { moneyFormat } from "@/src/utils/utils";
 export default function LogPage() {
   const { data: transactions = [], isLoading, isError } = useTransactions();
   const { data: wallets = [] } = useWallets();
+  const { data: categories = [] } = useCategories();
+  const updateMutation = useUpdateTransaction();
+
+  const handleAssignCategory = (transactionId: string, categoryId: string) => {
+    if (!categoryId) return;
+    updateMutation.mutate({ id: transactionId, updates: { categoryId } });
+  };
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -256,10 +264,13 @@ export default function LogPage() {
                 {!collapsedDates.has(dateStr) && (
                   <div className="flex flex-col">
                     {txs.map((tx) => (
-                      <TransactionTile
+                      <TransactionCard
                         key={tx.id}
                         transaction={tx}
                         onEdit={(targetTx) => setEditingTransaction(targetTx)}
+                        categories={categories}
+                        onAssignCategory={handleAssignCategory}
+                        className="mb-4 last:mb-0"
                       />
                     ))}
                   </div>
