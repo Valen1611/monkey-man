@@ -3,16 +3,40 @@
 import { useState } from "react";
 import { useCategories } from "@/src/hooks/useCategories";
 import { useBudgets, useRolloverBudgets } from "@/src/hooks/useBudgets";
-import BudgetTile from "@/src/components/BudgetTile";
+import BudgetGroupCard from "@/src/components/Budget/BudgetGroupCard";
+import AddCategoryModal from "@/src/components/Budget/AddCategoryModal";
+import InteractiveBudgetModal from "@/src/components/Budget/InteractiveBudgetModal";
 import BudgetCharts from "@/src/components/BudgetCharts";
 import BudgetHistoryView from "@/src/components/Budget/BudgetHistoryView";
 import { moneyFormat } from "@/src/utils/utils";
+
+const BUDGET_GROUPS = [
+  { key: "INCOME", label: "Income", emoji: "💰", color: "#22c55e" },
+  { key: "FIXED", label: "Fixed Expenses", emoji: "🏠", color: "#ef4444" },
+  { key: "VARIABLE", label: "Variable Expenses", emoji: "🛒", color: "#eab308" },
+];
 
 export default function BudgetPage() {
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [month, setMonth] = useState(currentMonthStr);
   const [activeTab, setActiveTab] = useState<"current" | "history">("current");
   const [rolloverFeedback, setRolloverFeedback] = useState<string | null>(null);
+  const [addCategoryModal, setAddCategoryModal] = useState<{ isOpen: boolean; groupName: string; groupLabel: string }>({
+    isOpen: false,
+    groupName: "",
+    groupLabel: "",
+  });
+  const [interactiveModal, setInteractiveModal] = useState<{ 
+    isOpen: boolean; 
+    groupName: string; 
+    groupLabel: string;
+    groupColor: string;
+  }>({
+    isOpen: false,
+    groupName: "",
+    groupLabel: "",
+    groupColor: "",
+  });
 
   const { data: categories = [], isLoading: loadingCats } = useCategories();
   const { data: budgets = [], isLoading: loadingBudgets } = useBudgets(month);
@@ -20,21 +44,18 @@ export default function BudgetPage() {
 
   const isLoading = loadingCats || loadingBudgets;
 
-  const getTotalLimit = (groupName: string) => {
-    return categories
-      .filter((c) => c.group === groupName)
-      .reduce((sum, c) => {
-        const b = budgets.find((b) => b.categoryId === c.id);
-        return sum + (b?.limit || 0);
-      }, 0);
+  const getGroupData = (groupName: string) => {
+    const groupCategories = categories.filter((c) => c.group === groupName);
+    const totalLimit = groupCategories.reduce((sum, c) => {
+      const b = budgets.find((b) => b.categoryId === c.id);
+      return sum + (b?.limit || 0);
+    }, 0);
+    const totalUsage = groupCategories.reduce((sum, c) => {
+      const b = budgets.find((b) => b.categoryId === c.id);
+      return sum + (b?.usage || 0);
+    }, 0);
+    return { groupCategories, totalLimit, totalUsage };
   };
-
-  const incomeTotal = getTotalLimit("INCOME");
-  const fixedTotal = getTotalLimit("FIXED");
-  const savingsTotal = getTotalLimit("SAVINGS");
-  const variableTotal = getTotalLimit("VARIABLE");
-  const disposableTotal =
-    incomeTotal - fixedTotal - savingsTotal - variableTotal;
 
   const handleRollover = () => {
     rolloverMutation.mutate(
@@ -51,6 +72,11 @@ export default function BudgetPage() {
       }
     );
   };
+
+  const incomeData = getGroupData("INCOME");
+  const fixedData = getGroupData("FIXED");
+  const variableData = getGroupData("VARIABLE");
+  const disposableTotal = incomeData.totalLimit - fixedData.totalLimit - variableData.totalLimit;
 
   return (
     <div className="flex-1 p-4 mt-8 w-full max-w-lg xl:max-w-6xl mx-auto flex flex-col gap-8">
@@ -125,95 +151,66 @@ export default function BudgetPage() {
               )}
             </div>
 
-            {/* Budgets List */}
-            <div className="p-6 rounded-[20px] bg-[#e0e0e0] shadow-[inset_11px_11px_16px_#a4a4a4,_inset_-11px_-11px_10px_#ffffff]">
-              {isLoading ? (
-                <div className="text-center text-gray-500 py-4 font-bold">
-                  Loading budgets...
-                </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {["INCOME", "FIXED", "SAVINGS", "VARIABLE"].map(
-                    (groupName) => {
-                      const groupCategories = categories.filter(
-                        (c) => c.group === groupName
-                      );
-                      if (groupCategories.length === 0) return null;
-
-                      let headerExtra = "";
-                      let headerColor = "text-gray-500";
-                      if (groupName === "INCOME") {
-                        headerExtra = `Total: ${moneyFormat(incomeTotal)}`;
-                        headerColor = "text-green-600";
-                      } else if (groupName === "FIXED") {
-                        headerExtra = `Available: ${moneyFormat(incomeTotal)}`;
-                        headerColor = "text-blue-600";
-                      } else if (groupName === "SAVINGS") {
-                        const avail = incomeTotal - fixedTotal;
-                        headerExtra = `Available: ${moneyFormat(avail)}`;
-                        headerColor =
-                          avail >= 0 ? "text-blue-600" : "text-red-500";
-                      } else if (groupName === "VARIABLE") {
-                        const avail = incomeTotal - fixedTotal - savingsTotal;
-                        headerExtra = `Available: ${moneyFormat(avail)}`;
-                        headerColor =
-                          avail >= 0 ? "text-blue-600" : "text-red-500";
+            {/* Budget Groups - Accordion Style */}
+            {isLoading ? (
+              <div className="text-center text-gray-500 py-8 font-bold">
+                Loading budgets...
+              </div>
+            ) : (
+              <div className="flex flex-col gap-6">
+                {BUDGET_GROUPS.map((group) => {
+                  const data = getGroupData(group.key);
+                  return (
+                    <BudgetGroupCard
+                      key={group.key}
+                      groupName={group.key}
+                      groupLabel={group.label}
+                      groupEmoji={group.emoji}
+                      groupColor={group.color}
+                      categories={data.groupCategories}
+                      budgets={budgets}
+                      yearMonth={month}
+                      totalLimit={data.totalLimit}
+                      totalUsage={data.totalUsage}
+                      onAddCategory={() =>
+                        setAddCategoryModal({
+                          isOpen: true,
+                          groupName: group.key,
+                          groupLabel: group.label,
+                        })
                       }
+                      onOpenInteractive={() =>
+                        setInteractiveModal({
+                          isOpen: true,
+                          groupName: group.key,
+                          groupLabel: group.label,
+                          groupColor: group.color,
+                        })
+                      }
+                    />
+                  );
+                })}
 
-                      return (
-                        <div key={groupName} className="flex flex-col gap-2">
-                          <div className="flex justify-between items-end ml-2 mb-1">
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">
-                              {groupName}
-                            </h3>
-                            <span
-                              className={`text-xs font-bold uppercase tracking-wider ${headerColor}`}
-                            >
-                              {headerExtra}
-                            </span>
-                          </div>
-                          {groupCategories.map((category) => {
-                            const budget = budgets.find(
-                              (b) => b.categoryId === category.id
-                            );
-                            return (
-                              <BudgetTile
-                                key={category.id}
-                                category={category}
-                                budget={budget}
-                                yearMonth={month}
-                              />
-                            );
-                          })}
-                        </div>
-                      );
-                    }
-                  )}
-
-                  {categories.filter((c) => c.group !== "TRANSFER").length >
-                  0 ? (
-                    <div className="mt-2 p-4 rounded-[15px] bg-[#e0e0e0] shadow-[5px_5px_10px_#bebebe,_-5px_-5px_10px_#ffffff] flex justify-between items-center border border-[#d1d1d1]">
-                      <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wider">
-                        Disposable
-                      </h3>
-                      <span
-                        className={`text-lg font-bold tracking-wider ${
-                          disposableTotal >= 0
-                            ? "text-green-600"
-                            : "text-red-500"
-                        }`}
-                      >
-                        {moneyFormat(disposableTotal)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-center text-gray-500 py-4 font-bold">
-                      No categories found.
-                    </div>
-                  )}
+                {/* Disposable Income Summary */}
+                <div className="p-5 rounded-[20px] bg-gradient-to-br from-[#e0e0e0] to-[#d8d8d8] shadow-[8px_8px_16px_#bebebe,_-8px_-8px_16px_#ffffff] flex justify-between items-center border-2 border-gray-300/50">
+                  <div>
+                    <h3 className="text-sm font-black text-gray-600 uppercase tracking-wider">
+                      Disposable Income
+                    </h3>
+                    <p className="text-xs text-gray-500 font-semibold mt-0.5">
+                      After fixed & variable expenses
+                    </p>
+                  </div>
+                  <span
+                    className={`text-2xl font-black tracking-tight ${
+                      disposableTotal >= 0 ? "text-green-600" : "text-red-500"
+                    }`}
+                  >
+                    {moneyFormat(disposableTotal)}
+                  </span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Charts Section */}
@@ -224,6 +221,34 @@ export default function BudgetPage() {
           )}
         </div>
       )}
+
+      {/* Add Category Modal */}
+      <AddCategoryModal
+        isOpen={addCategoryModal.isOpen}
+        onClose={() => setAddCategoryModal({ isOpen: false, groupName: "", groupLabel: "" })}
+        groupName={addCategoryModal.groupName}
+        groupLabel={addCategoryModal.groupLabel}
+      />
+
+      {/* Interactive Budget Modal */}
+      <InteractiveBudgetModal
+        isOpen={interactiveModal.isOpen}
+        onClose={() => setInteractiveModal({ isOpen: false, groupName: "", groupLabel: "", groupColor: "" })}
+        groupName={interactiveModal.groupName}
+        groupLabel={interactiveModal.groupLabel}
+        groupColor={interactiveModal.groupColor}
+        categories={categories.filter((c) => c.group === interactiveModal.groupName)}
+        budgets={budgets}
+        yearMonth={month}
+        totalLimit={getGroupData(interactiveModal.groupName).totalLimit}
+        onAddCategory={() => {
+          setAddCategoryModal({
+            isOpen: true,
+            groupName: interactiveModal.groupName,
+            groupLabel: interactiveModal.groupLabel,
+          });
+        }}
+      />
     </div>
   );
 }

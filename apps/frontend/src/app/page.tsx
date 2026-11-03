@@ -5,6 +5,7 @@ import SkeuomorphicWalletDeck from "../components/Wallet/SkeuomorphicCard";
 import BudgetOverview from "../components/Home/BudgetOverview";
 import ExpenseTrend from "../components/Home/ExpenseTrend";
 import LiveTransactionFeed from "../components/Home/LiveTransactionFeed";
+import PendingCategorizationDrawer from "../components/Home/PendingCategorizationDrawer";
 import QuickAddTransactionModal from "../components/Home/QuickAddTransactionModal";
 
 export default function Home() {
@@ -61,6 +62,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Pending Categorization Drawer - slides in on hover */}
+      <PendingCategorizationDrawer />
 
       {/* Floating Action Button (FAB) for Quick Add Transaction */}
       <div className="fixed bottom-6 right-6 z-40">
