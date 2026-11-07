@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { moneyFormat } from "@/src/utils/utils";
 import { Transaction } from "@/src/services/transactionService";
 import { Category } from "@/src/hooks/useCategories";
@@ -18,6 +18,203 @@ export interface TransactionCardProps {
   variant?: "raised" | "inset";
   className?: string;
 }
+
+// ─── Category Combobox ────────────────────────────────────────────────────────
+
+interface CategoryComboboxProps {
+  categories: Category[];
+  groups: string[];
+  onSelect: (categoryId: string) => void;
+  disabled?: boolean;
+}
+
+function CategoryCombobox({ categories, groups, onSelect, disabled }: CategoryComboboxProps) {
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Filter categories by query
+  const filteredGroups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return groups
+      .map((grp) => ({
+        grp,
+        items: categories.filter(
+          (c) => c.group === grp && (q === "" || c.name.toLowerCase().includes(q))
+        ),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [categories, groups, query]);
+
+  // Flat list of visible items for keyboard nav
+  const flatItems = useMemo(
+    () => filteredGroups.flatMap((g) => g.items),
+    [filteredGroups]
+  );
+
+  // Reset highlight when filter changes
+  useEffect(() => {
+    setHighlighted(flatItems[0]?.id ?? null);
+  }, [query]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isOpen]);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (!highlighted || !dropdownRef.current) return;
+    const el = dropdownRef.current.querySelector(`[data-id="${highlighted}"]`) as HTMLElement | null;
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlighted]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!isOpen) {
+        if (e.key === "ArrowDown" || e.key === "Enter") setIsOpen(true);
+        return;
+      }
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const idx = flatItems.findIndex((c) => c.id === highlighted);
+        const next =
+          e.key === "ArrowDown"
+            ? flatItems[(idx + 1) % flatItems.length]
+            : flatItems[(idx - 1 + flatItems.length) % flatItems.length];
+        setHighlighted(next?.id ?? null);
+        return;
+      }
+      if (e.key === "Enter" && highlighted) {
+        onSelect(highlighted);
+        setIsOpen(false);
+        setQuery("");
+      }
+    },
+    [isOpen, flatItems, highlighted, onSelect]
+  );
+
+  const handleSelect = (id: string) => {
+    onSelect(id);
+    setIsOpen(false);
+    setQuery("");
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      {/* Input */}
+      <div
+        className={`flex items-center gap-2 w-full py-1.5 px-2.5 rounded-lg bg-[#e0e0e0] transition-all ${
+          isOpen
+            ? "shadow-[inset_2px_2px_4px_#bebebe,_inset_-2px_-2px_4px_#ffffff] ring-1 ring-amber-400/60"
+            : "shadow-[inset_2px_2px_4px_#bebebe,_inset_-2px_-2px_4px_#ffffff]"
+        }`}
+      >
+        <span className="text-gray-400 text-xs shrink-0">⚡</span>
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          disabled={disabled}
+          placeholder={disabled ? "Assigning category..." : "Search category..."}
+          className="flex-1 bg-transparent outline-none text-xs font-bold text-gray-700 placeholder-gray-400 disabled:opacity-50 min-w-0"
+          onFocus={() => setIsOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={() => {
+            setIsOpen((v) => !v);
+            if (!isOpen) inputRef.current?.focus();
+          }}
+          className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+          aria-label="Toggle category list"
+        >
+          <svg
+            className={`w-3 h-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="2,4 6,8 10,4" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          className="absolute z-50 left-0 right-0 mt-1.5 rounded-xl bg-[#e0e0e0] shadow-[6px_6px_14px_#bebebe,_-6px_-6px_14px_#ffffff] border border-gray-200/60 max-h-56 overflow-y-auto custom-scrollbar"
+        >
+          {filteredGroups.length === 0 ? (
+            <div className="px-3 py-3 text-xs font-bold text-gray-400 text-center">
+              No categories found
+            </div>
+          ) : (
+            filteredGroups.map(({ grp, items }) => (
+              <div key={grp}>
+                {/* Group label */}
+                <div className="px-3 pt-2.5 pb-1 text-[10px] font-black uppercase tracking-widest text-gray-400 select-none">
+                  {grp}
+                </div>
+                {items.map((c) => (
+                  <button
+                    key={c.id}
+                    data-id={c.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      // prevent input blur before click fires
+                      e.preventDefault();
+                      handleSelect(c.id);
+                    }}
+                    onMouseEnter={() => setHighlighted(c.id)}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center gap-2 transition-all rounded-lg mx-auto ${
+                      highlighted === c.id
+                        ? "bg-[#d8d8d8] shadow-[inset_1px_1px_3px_#bebebe]"
+                        : "hover:bg-[#e8e8e8]"
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: c.color ?? "#9ca3af" }}
+                    />
+                    <span style={{ color: c.color ?? "#374151" }}>{c.name}</span>
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TransactionCard ──────────────────────────────────────────────────────────
 
 export default function TransactionCard({
   transaction,
@@ -189,30 +386,15 @@ export default function TransactionCard({
         )}
       </div>
 
-      {/* Accessible Inline Category Dropdown when Uncategorized */}
+      {/* Search+Dropdown Combobox when Uncategorized */}
       {isUncategorized && onAssignCategory && categories && categories.length > 0 && (
         <div className="mt-1 pt-2 border-t border-gray-300/60">
-          <select
-            value=""
-            onChange={(e) => onAssignCategory(transaction.id, e.target.value)}
+          <CategoryCombobox
+            categories={categories}
+            groups={groups}
+            onSelect={(categoryId) => onAssignCategory(transaction.id, categoryId)}
             disabled={isUpdatingCategory}
-            className="w-full py-1.5 px-2.5 rounded-lg bg-[#e0e0e0] shadow-[inset_2px_2px_4px_#bebebe,_inset_-2px_-2px_4px_#ffffff] focus:ring-1 focus:ring-amber-500 outline-none text-xs font-bold text-gray-700 cursor-pointer disabled:opacity-50 transition-all"
-          >
-            <option value="" disabled>
-              {isUpdatingCategory ? "Assigning category..." : "⚡ Select category..."}
-            </option>
-            {groups.map((grp) => (
-              <optgroup key={grp} label={grp}>
-                {categories
-                  .filter((c) => c.group === grp)
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
-          </select>
+          />
         </div>
       )}
     </div>

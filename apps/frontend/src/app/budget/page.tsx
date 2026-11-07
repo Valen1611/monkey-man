@@ -13,6 +13,7 @@ import { moneyFormat } from "@/src/utils/utils";
 const BUDGET_GROUPS = [
   { key: "INCOME", label: "Income", emoji: "💰", color: "#22c55e" },
   { key: "FIXED", label: "Fixed Expenses", emoji: "🏠", color: "#ef4444" },
+  { key: "SAVINGS", label: "Savings", emoji: "🏦", color: "#3b82f6" },
   { key: "VARIABLE", label: "Variable Expenses", emoji: "🛒", color: "#eab308" },
 ];
 
@@ -75,8 +76,9 @@ export default function BudgetPage() {
 
   const incomeData = getGroupData("INCOME");
   const fixedData = getGroupData("FIXED");
+  const savingsData = getGroupData("SAVINGS");
   const variableData = getGroupData("VARIABLE");
-  const disposableTotal = incomeData.totalLimit - fixedData.totalLimit - variableData.totalLimit;
+  const disposableTotal = incomeData.totalLimit - fixedData.totalLimit - savingsData.totalLimit - variableData.totalLimit;
 
   return (
     <div className="flex-1 p-4 mt-8 w-full max-w-lg xl:max-w-6xl mx-auto flex flex-col gap-8">
@@ -160,6 +162,17 @@ export default function BudgetPage() {
               <div className="flex flex-col gap-6">
                 {BUDGET_GROUPS.map((group) => {
                   const data = getGroupData(group.key);
+
+                  // Available income context per group (only for expense/savings groups)
+                  let availableIncome: number | undefined;
+                  if (group.key === "FIXED") {
+                    availableIncome = incomeData.totalLimit;
+                  } else if (group.key === "SAVINGS") {
+                    availableIncome = incomeData.totalLimit - fixedData.totalLimit;
+                  } else if (group.key === "VARIABLE") {
+                    availableIncome = incomeData.totalLimit - fixedData.totalLimit - savingsData.totalLimit;
+                  }
+
                   return (
                     <BudgetGroupCard
                       key={group.key}
@@ -172,6 +185,7 @@ export default function BudgetPage() {
                       yearMonth={month}
                       totalLimit={data.totalLimit}
                       totalUsage={data.totalUsage}
+                      availableIncome={availableIncome}
                       onAddCategory={() =>
                         setAddCategoryModal({
                           isOpen: true,
@@ -198,7 +212,7 @@ export default function BudgetPage() {
                       Disposable Income
                     </h3>
                     <p className="text-xs text-gray-500 font-semibold mt-0.5">
-                      After fixed & variable expenses
+                      After fixed, savings & variable expenses
                     </p>
                   </div>
                   <span
@@ -228,6 +242,8 @@ export default function BudgetPage() {
         onClose={() => setAddCategoryModal({ isOpen: false, groupName: "", groupLabel: "" })}
         groupName={addCategoryModal.groupName}
         groupLabel={addCategoryModal.groupLabel}
+        yearMonth={month}
+        budgets={budgets}
       />
 
       {/* Interactive Budget Modal */}

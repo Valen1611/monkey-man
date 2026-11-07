@@ -16,6 +16,7 @@ interface BudgetGroupCardProps {
     yearMonth: string;
     totalLimit: number;
     totalUsage: number;
+    availableIncome?: number;
     onAddCategory: () => void;
     onOpenInteractive: () => void;
 }
@@ -30,6 +31,7 @@ export default function BudgetGroupCard({
     yearMonth,
     totalLimit,
     totalUsage,
+    availableIncome,
     onAddCategory,
     onOpenInteractive,
 }: BudgetGroupCardProps) {
@@ -37,6 +39,11 @@ export default function BudgetGroupCard({
 
     const percentage = totalLimit > 0 ? Math.min((totalUsage / totalLimit) * 100, 100) : 0;
     const isOver = totalLimit > 0 && totalUsage > totalLimit;
+
+    // How much of the available income is already allocated to this group's limits
+    const allocated = totalLimit;
+    const unallocated = availableIncome !== undefined ? availableIncome - allocated : undefined;
+    const isOverAllocated = unallocated !== undefined && unallocated < 0;
 
     return (
         <div className="rounded-[20px] bg-[#e0e0e0] shadow-[8px_8px_16px_#bebebe,_-8px_-8px_16px_#ffffff] overflow-hidden">
@@ -70,6 +77,19 @@ export default function BudgetGroupCard({
                                 </span>
                             )}
                         </div>
+                        {availableIncome !== undefined && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">available</span>
+                                <span className={`text-[11px] font-black ${isOverAllocated ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {moneyFormat(availableIncome)}
+                                </span>
+                                {unallocated !== undefined && (
+                                    <span className={`text-[10px] font-semibold ${isOverAllocated ? 'text-red-400' : 'text-green-600'}`}>
+                                        ({isOverAllocated ? '-' : ''}{moneyFormat(Math.abs(unallocated))} {isOverAllocated ? 'over' : 'free'})
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -117,7 +137,7 @@ export default function BudgetGroupCard({
             {/* Expanded Content - Categories List */}
             {isExpanded && (
                 <div className="px-5 pb-5">
-                    <div className="p-4 rounded-[16px] bg-[#e0e0e0] shadow-[inset_3px_3px_6px_#c2c2c2,_inset_-3px_-3px_6px_#ffffff] flex flex-col gap-3">
+                    <div className="p-3 rounded-[16px] bg-[#e0e0e0] shadow-[inset_3px_3px_6px_#c2c2c2,_inset_-3px_-3px_6px_#ffffff] flex flex-col divide-y divide-gray-300/50">
                         {categories.length === 0 ? (
                             <div className="text-center py-6 text-sm text-gray-400 font-semibold">
                                 No categories in this group yet.

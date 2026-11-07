@@ -30,6 +30,14 @@ export const budgetService = {
         return res.json();
     },
 
+    async removeBudget(id: string, yearMonth: string, categoryId: string): Promise<void> {
+        const res = await apiFetch(
+            `${ENDPOINT}/${id}?yearMonth=${encodeURIComponent(yearMonth)}&categoryId=${encodeURIComponent(categoryId)}`,
+            { method: 'DELETE' }
+        );
+        if (!res.ok) throw new Error('Failed to remove budget');
+    },
+
     async rolloverBudgets(toMonth: string, fromMonth?: string): Promise<{ count: number; message: string }> {
         const res = await apiFetch(`${ENDPOINT}/rollover`, {
             method: 'POST',

@@ -21,6 +21,18 @@ export function useUpdateBudget() {
     });
 }
 
+export function useRemoveBudget() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, yearMonth, categoryId }: { id: string; yearMonth: string; categoryId: string }) =>
+            budgetService.removeBudget(id, yearMonth, categoryId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['budgets'] });
+            queryClient.invalidateQueries({ queryKey: ['budgetHistory'] });
+        }
+    });
+}
+
 export function useRolloverBudgets() {
     const queryClient = useQueryClient();
     return useMutation({
